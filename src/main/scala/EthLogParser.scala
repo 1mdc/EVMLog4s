@@ -1,4 +1,4 @@
-import io.reactivex.Flowable
+import io.reactivex.{Flowable, Observable}
 import org.web3j.crypto.Hash
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.methods.request.EthFilter
@@ -14,7 +14,7 @@ import scala.compiletime.*
 import scala.deriving.*
 import scala.jdk.CollectionConverters.*
 
-def processRawLog[T <: EthLog[_]](
+def processRawLog[T <: EthLogLine[_]](
     log: Log,
     signatures: Map[String, T]
 ): Option[_] = {
@@ -41,12 +41,18 @@ def processRawLog[T <: EthLog[_]](
     )
 }
 
-final case class ParsedLog[T](parsedRecord: Option[T], data: String, topics: List[String], blockNumber: BigInt, blockHash: SAddress)
+final case class ParsedLog[T](
+    transaction: SAddress,
+    parsedRecord: T,
+    data: String,
+    topics: List[String],
+    blockNumber: BigInt,
+    blockHash: SAddress
+)
 
-class EthLogParser(rpcUrl: String):
-  lazy val web3 = Web3j.build(new HttpService(rpcUrl));
+class EthLogParser()(using web3: Web3jWrapper):
 
-  def streamBlocks[T <: EthLog[_]](
+  def streamBlocks[T <: EthLogLine[_]](
       fromBlockNumber: BigInt,
       addresses: List[String],
       signatures: Map[String, T]
@@ -60,9 +66,23 @@ class EthLogParser(rpcUrl: String):
           addresses.asJava
         )
       )
-      .map(log => ParsedLog(processRawLog(log, signatures), log.getData, log.getTopics.asScala.toList, BigInt(log.getBlockNumber), SAddress(log.getBlockHash)))
+      .flatMap(log => {
+        val t = processRawLog(log, signatures)
+        if t.isDefined then
+          Flowable.just(
+            ParsedLog(
+              SAddress(log.getTransactionHash),
+              t.get,
+              log.getData,
+              log.getTopics.asScala.toList,
+              BigInt(log.getBlockNumber),
+              SAddress(log.getBlockHash)
+            )
+          )
+        else Flowable.empty()
+      })
 
-  def parserLogsFromBlocks[T <: EthLog[_]](
+  def parserLogsFromBlocks[T <: EthLogLine[_]](
       fromBlockNumber: BigInt,
       toBlockNumber: BigInt,
       addresses: List[String],
@@ -72,12 +92,21 @@ class EthLogParser(rpcUrl: String):
     val toBlock = new DefaultBlockParameterNumber(toBlockNumber.bigInteger)
     val logRequest = web3
       .ethGetLogs(new EthFilter(fromBlock, toBlock, addresses.asJava))
-      .send()
     println(s"found ${logRequest.getLogs.size()} logs")
     logRequest.getLogs.asScala
       .flatMap(logResult => {
         logResult.get() match {
-          case log: Log => Some(ParsedLog(processRawLog(log, signatures), log.getData, log.getTopics.asScala.toList, BigInt(log.getBlockNumber), SAddress(log.getBlockHash)))
+          case log: Log =>
+            processRawLog(log, signatures).map(parsedLine =>
+              ParsedLog(
+                SAddress(log.getTransactionHash),
+                parsedLine,
+                log.getData,
+                log.getTopics.asScala.toList,
+                BigInt(log.getBlockNumber),
+                SAddress(log.getBlockHash)
+              )
+            )
           case _ =>
             println("Unknown log type")
             None

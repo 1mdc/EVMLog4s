@@ -8,7 +8,7 @@ This library is **NOT compatible with scala 2.x** as it uses [type class derivat
 
 Add repository to `build.sbt`
 ```
-Resolver.githubPackages("1mdc")
+resolvers += Resolver.githubPackages("1mdc")
 ```
 
 Add library to `build.sbt`

@@ -6,48 +6,45 @@ import org.web3j.crypto.Hash
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.methods.request.EthFilter
 import org.web3j.protocol.core.methods.response.Log
-import org.web3j.protocol.core.{DefaultBlockParameterName, DefaultBlockParameterNumber}
+import org.web3j.protocol.core.{
+  DefaultBlockParameterName,
+  DefaultBlockParameterNumber
+}
 import org.web3j.protocol.http.HttpService
 
 import java.lang.reflect.Field
 import scala.compiletime.*
 import scala.deriving.*
 import scala.jdk.CollectionConverters.*
+import scala.util.{Failure, Success, Try}
 
 def processRawLog[T <: EthLogLine[_]](
-    log: Log,
+    log: WrappedEthLog,
     signatures: Map[String, T]
-): Option[_] = {
-  log.getTopics.asScala
-    .take(1)
-    .headOption
-    .flatMap(sign =>
-      signatures
-        .find(ii =>
-          Hash
-            .sha3(org.web3j.utils.Numeric.toHexString(ii._1.getBytes))
-            .toLowerCase == sign.toLowerCase
-        )
-        .map(ii => {
-          val params = log.getTopics.asScala
-            .drop(1)
-            .map(_.replace("0x", ""))
-            .toList ++ log.getData
-            .replace("0x", "")
-            .grouped(64)
-            .toList
-          ii._2.parseObj(params)
-        })
-    )
+): Option[Try[_]] = {
+  val eventName :: eventData = log.topics
+  signatures
+    .find { case (signStr, _) =>
+      Hash
+        .sha3(org.web3j.utils.Numeric.toHexString(signStr.getBytes))
+        .toLowerCase == eventName.toLowerCase
+    }
+    .map { case (_, signType) =>
+      val params = eventData
+        .map(_.replace("0x", "")) ++ log.data
+        .replace("0x", "")
+        .grouped(64)
+        .toList
+      Try(signType.parseObj(params))
+    }
 }
 
-final case class ParsedLog[T](
+final case class ParsedEvent[T](
     transaction: SAddress,
     parsedRecord: T,
     data: String,
     topics: List[String],
-    blockNumber: BigInt,
-    blockHash: SAddress
+    blockNumber: BigInt
 )
 
 class EthLogParser()(using web3: Web3jWrapper) extends LazyLogging:
@@ -57,29 +54,29 @@ class EthLogParser()(using web3: Web3jWrapper) extends LazyLogging:
       toBlockNumber: BigInt,
       addresses: List[String],
       signatures: Map[String, T]
-  ): List[ParsedLog[_]] =
+  ): List[ParsedEvent[_]] =
     val fromBlock = new DefaultBlockParameterNumber(fromBlockNumber.bigInteger)
     val toBlock = new DefaultBlockParameterNumber(toBlockNumber.bigInteger)
-    val logRequest = web3
+    val logs = web3
       .ethGetLogs(new EthFilter(fromBlock, toBlock, addresses.asJava))
-    logger.debug(s"found ${logRequest.getLogs.size()} logs")
-    logRequest.getLogs.asScala
-      .flatMap(logResult => {
-        logResult.get() match {
-          case log: Log =>
-            processRawLog(log, signatures).map(parsedLine =>
-              ParsedLog(
-                SAddress(log.getTransactionHash),
-                parsedLine,
-                log.getData,
-                log.getTopics.asScala.toList,
-                BigInt(log.getBlockNumber),
-                SAddress(log.getBlockHash)
+    logger.debug(s"found ${logs.length} logs")
+    logs
+      .flatMap(log =>
+        processRawLog(log, signatures).flatMap(parsedLog =>
+          parsedLog match {
+            case Success(value) =>
+              Some(
+                ParsedEvent(
+                  log.hash,
+                  value,
+                  log.data,
+                  log.topics,
+                  log.blockNumber
+                )
               )
-            )
-          case _ =>
-            logger.warn("Unknown log type")
-            None
-        }
-      })
-      .toList
+            case Failure(exception) =>
+              logger.warn("unable to parse line due to error", exception);
+              None
+          }
+        )
+      )

@@ -22,14 +22,19 @@ object EthLogLine:
       org.web3j.utils.Numeric.hexStringToByteArray(hexValues.head)
 
   given EthLogLine[String] with
-    def parseObj(hexValues: List[String]): String = new String(org.web3j.utils.Numeric.hexStringToByteArray(hexValues.head))
+    def parseObj(hexValues: List[String]): String = new String(
+      org.web3j.utils.Numeric.hexStringToByteArray(hexValues.head)
+    ).trim
 
   given EthLogLine[SAddress] with
-    def parseObj(hexValues: List[String]): SAddress = hexValues.map(SAddress.apply).head
+    def parseObj(hexValues: List[String]): SAddress =
+      hexValues.map(SAddress.apply).head
 
   given EthLogLine[BigInt] with
     def parseObj(hexValues: List[String]): BigInt =
-      BigInt(new String(org.web3j.utils.Numeric.hexStringToByteArray(hexValues.head)))
+      BigInt(
+        new String(org.web3j.utils.Numeric.hexStringToByteArray(hexValues.head))
+      )
 
   def eqProduct[T](
       p: Mirror.ProductOf[T],
@@ -38,7 +43,9 @@ object EthLogLine:
     (items: List[String]) =>
       p.fromProduct(
         toTuple(
-          elems.zip(items).map(i => i._1.parseObj(List(i._2))),
+          elems.zip(items).map { case (tpy, value) =>
+            tpy.parseObj(List(value))
+          },
           EmptyTuple
         )
       )
@@ -49,7 +56,6 @@ object EthLogLine:
       case p: Mirror.ProductOf[T] => eqProduct(p, elemInstances)
       case _ => throw new RuntimeException("not supported type")
 
-case class SAddress(value: String) {
+case class SAddress(value: String):
   def ==(address: SAddress): Boolean =
     address.value.toLowerCase == address.value.toLowerCase
-}

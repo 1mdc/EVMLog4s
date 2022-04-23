@@ -4,6 +4,18 @@ EVMLog4s is a utility to map EVM event log into case class.
 
 This library is **NOT compatible with scala 2.x** as it uses [type class derivation](https://docs.scala-lang.org/scala3/reference/contextual/derivation.html) which is a new feature in scala 3
 
+### Install
+
+Add repository to `build.sbt`
+```
+Resolver.githubPackages("1mdc")
+```
+
+Add library to `build.sbt`
+```
+libraryDependencies += "com.hoangong" % "evmlog4s" % "1.0.0"
+```
+
 ### Usage
 
 ```

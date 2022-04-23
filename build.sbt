@@ -1,16 +1,20 @@
 val scala3Version = "3.1.1"
 
+
 lazy val root = project
   .in(file("."))
   .settings(
-    name := "ethereum wrapper for scala",
-    version := "0.1.0-SNAPSHOT",
-
+    name := "EVMLog4s",
+    organization := "com.hoangong",
+    version := "1.0.0",
     scalaVersion := scala3Version,
-
-    libraryDependencies += "org.scalameta" %% "munit" % "0.7.29" % Test,
-    libraryDependencies += "org.web3j" % "core" % "4.9.0",
-    libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4",
-    libraryDependencies += "com.squareup.okhttp3" % "okhttp" % "4.9.3",
-    libraryDependencies += "org.bouncycastle" % "bcprov-jdk15on" % "1.70"
-)
+    githubOwner := "1mdc",
+    githubRepository := "EVMLog4s",
+    githubTokenSource := TokenSource.Environment("GITHUB_TOKEN"),
+    libraryDependencies ++= Seq(
+      "org.scalameta" %% "munit" % Versions.munitVersion % Test,
+      "org.web3j" % "core" % Versions.web3jVersion,
+      "com.typesafe.scala-logging" %% "scala-logging" % Versions.scalaLoggingVersion,
+      "com.squareup.okhttp3" % "okhttp" % Versions.okhttpVersion
+    )
+  )

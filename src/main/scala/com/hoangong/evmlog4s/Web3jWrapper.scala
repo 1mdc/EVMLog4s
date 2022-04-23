@@ -1,3 +1,5 @@
+package com.hoangong.evmlog4s
+
 import io.reactivex.Flowable
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.methods.request.EthFilter

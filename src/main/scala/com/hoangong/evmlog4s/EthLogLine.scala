@@ -1,8 +1,10 @@
+package com.hoangong.evmlog4s
+
 import scala.compiletime.*
 import scala.deriving.*
 
 trait EthLogLine[T]:
-  def parseObj(items: List[String]): T
+  def parseObj(hexValues: List[String]): T
 
 inline def summonAll[T <: Tuple]: List[EthLogLine[_]] =
   inline erasedValue[T] match
@@ -16,18 +18,18 @@ def toTuple(xs: List[_], acc: Tuple): Tuple =
 
 object EthLogLine:
   given EthLogLine[Array[Byte]] with
-    def parseObj(items: List[String]): Array[Byte] =
-      org.web3j.utils.Numeric.hexStringToByteArray(items.head)
+    def parseObj(hexValues: List[String]): Array[Byte] =
+      org.web3j.utils.Numeric.hexStringToByteArray(hexValues.head)
 
   given EthLogLine[String] with
-    def parseObj(items: List[String]): String = items.head
+    def parseObj(hexValues: List[String]): String = new String(org.web3j.utils.Numeric.hexStringToByteArray(hexValues.head))
 
   given EthLogLine[SAddress] with
-    def parseObj(items: List[String]): SAddress = items.map(SAddress.apply).head
+    def parseObj(hexValues: List[String]): SAddress = hexValues.map(SAddress.apply).head
 
   given EthLogLine[BigInt] with
-    def parseObj(items: List[String]): BigInt =
-      org.web3j.utils.Numeric.toBigInt(items.head)
+    def parseObj(hexValues: List[String]): BigInt =
+      BigInt(new String(org.web3j.utils.Numeric.hexStringToByteArray(hexValues.head)))
 
   def eqProduct[T](
       p: Mirror.ProductOf[T],

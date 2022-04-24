@@ -17,7 +17,7 @@ lazy val root = project
       "GitHub Package Registry",
       "maven.pkg.github.com",
       "1mdc",
-      sys.env.getOrElse("GITHUB_TOKEN", "")
+      sys.env.getOrElse("PUBLISH_GITHUB_TOKEN", "")
     ),
     publishTo := Some(
       "GitHub Package Registry" at "https://maven.pkg.github.com/1mdc/EVMLog4s/"

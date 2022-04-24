@@ -1,16 +1,27 @@
 val scala3Version = "3.1.1"
 
-
 lazy val root = project
   .in(file("."))
   .settings(
     name := "EVMLog4s",
     organization := "com.hoangong",
-    version := "1.0.0",
+    version := sys.env
+      .getOrElse(
+        "VERSION",
+        "0.0.1-" + sys.env.getOrElse("GITHUB_SHA", "noci") + "-SNAPSHOT"
+      )
+      .replace("v", "")
+      .replace("V", ""),
     scalaVersion := scala3Version,
-    githubOwner := "1mdc",
-    githubRepository := "EVMLog4s",
-    githubTokenSource := TokenSource.Environment("GITHUB_TOKEN"),
+    credentials += Credentials(
+      "GitHub Package Registry",
+      "maven.pkg.github.com",
+      "1mdc",
+      sys.env.getOrElse("GITHUB_TOKEN", "")
+    ),
+    publishTo := Some(
+      "GitHub Package Registry" at "https://maven.pkg.github.com/1mdc/EVMLog4s/"
+    ),
     libraryDependencies ++= Seq(
       "org.scalameta" %% "munit" % Versions.munitVersion % Test,
       "org.web3j" % "core" % Versions.web3jVersion,

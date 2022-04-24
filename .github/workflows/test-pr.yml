@@ -14,5 +14,5 @@ jobs:
         with:
           java-version: '11'
           distribution: 'temurin'
-      - name: Set version
-        run: export VERSION=${{github.ref_name}}
+      - name: Run tests
+        run: sbt test

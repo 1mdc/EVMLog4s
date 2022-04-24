@@ -5,10 +5,13 @@ lazy val root = project
   .settings(
     name := "EVMLog4s",
     organization := "com.hoangong",
-    version := sys.env.getOrElse(
-      "VERSION",
-      "0.0.1-" + sys.env.getOrElse("GITHUB_SHA", "noci") + "-SNAPSHOT"
-    ),
+    version := sys.env
+      .getOrElse(
+        "VERSION",
+        "0.0.1-" + sys.env.getOrElse("GITHUB_SHA", "noci") + "-SNAPSHOT"
+      )
+      .replace("v", "")
+      .replace("V", ""),
     scalaVersion := scala3Version,
     credentials += Credentials(
       "GitHub Package Registry",

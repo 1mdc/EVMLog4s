@@ -15,4 +15,4 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
       - name: Release snapshot
-        run: sbt release
+        run: sbt publish

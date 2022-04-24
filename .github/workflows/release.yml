@@ -22,4 +22,5 @@ jobs:
       - name: Publish
         run: |
           export VERSION=${{github.ref_name}}
+          export PUBLISH_GITHUB_TOKEN=${{secrets.PUBLISH_GITHUB_TOKEN}}
           sbt publish
